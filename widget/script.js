@@ -42,6 +42,10 @@ if (widgetStyle === "2") {
     "Verified --album-art-margin:",
     rootStyles.getPropertyValue("--album-art-margin")
   );
+} else if (widgetStyle === "3") {
+  // Style 3: Full-screen layout - apply full-screen class to body
+  document.body.classList.add("fullscreen-layout");
+  console.debug("Applied Style 3 - Full-screen layout");
 } else {
   console.debug("Applied Style 1");
 }
@@ -81,7 +85,7 @@ async function RefreshAccessToken() {
   }
 }
 
-async function GetCurrentlyPlaying(refreshInterval) {
+async function GetCurrentlyPlaying() {
   try {
     // Get the current player information from Spotify
     const response = await fetch(
@@ -134,6 +138,7 @@ function UpdatePlayer(data) {
       : `images/placeholder-album-art.png`; // The album art URL
   const artist = `${data.item.artists[0].name}`; // Name of the artist
   const name = `${data.item.name}`; // Name of the song
+  const album = `${data.item.album.name}`; // Name of the album
   const duration = `${data.item.duration_ms / 1000}`; // The duration of the song in seconds
   const progress = `${data.progress_ms / 1000}`; // The current position in seconds
 
@@ -178,9 +183,30 @@ function UpdatePlayer(data) {
   UpdateAlbumArt(document.getElementById("albumArt"), albumArt);
   UpdateAlbumArt(document.getElementById("backgroundImage"), albumArt);
 
+  // Set full-screen background for style=3
+  if (widgetStyle === "3") {
+    const mainContainer = document.getElementById("mainContainer");
+    mainContainer.style.setProperty('--bg-image', `url(${albumArt})`);
+    // Apply the background image to the ::before pseudo-element
+    const style = document.createElement('style');
+    style.textContent = `
+      body.fullscreen-layout #mainContainer::before {
+        background-image: url(${albumArt});
+      }
+    `;
+    // Remove any existing dynamic style
+    const existingStyle = document.getElementById('dynamic-bg-style');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+    style.id = 'dynamic-bg-style';
+    document.head.appendChild(style);
+  }
+
   // Set song info
   UpdateTextLabel(document.getElementById("artistLabel"), artist);
   UpdateTextLabel(document.getElementById("songLabel"), name);
+  UpdateTextLabel(document.getElementById("albumLabel"), album);
 
   // Set progressbar
   const progressPerc = (progress / duration) * 100; // Progress expressed as a percentage
@@ -233,7 +259,13 @@ function ConvertSecondsToMinutesSoThatItLooksBetterOnTheOverlay(time) {
 }
 
 function SetVisibility(isVisible, updateCurrentState = true) {
-  widgetVisibility = isVisible;
+  // For full-screen layout, always keep visible
+  if (widgetStyle === "3") {
+    const mainContainer = document.getElementById("mainContainer");
+    mainContainer.style.opacity = 1;
+    if (updateCurrentState) currentState = isVisible;
+    return;
+  }
 
   const mainContainer = document.getElementById("mainContainer");
 
@@ -260,6 +292,10 @@ window.addEventListener("resize", resize);
 
 resize();
 function resize() {
+  // Skip scaling for full-screen layout (style=3)
+  if (widgetStyle === "3") {
+    return;
+  }
   const scale = window.innerWidth / maxWidth;
   outer.style.transform = "translate(-50%, 50%) scale(" + scale + ")";
 }
@@ -271,7 +307,10 @@ function resize() {
 
 if (hideAlbumArt) {
   document.getElementById("albumArtBox").style.display = "none";
-  document.getElementById("songInfoBox").style.width = "calc(100% - 20px)";
+  if (widgetStyle !== "3") {
+    // Only apply width change for non-full-screen layouts
+    document.getElementById("songInfoBox").style.width = "calc(100% - 20px)";
+  }
 }
 
 ////////////////////////////////
