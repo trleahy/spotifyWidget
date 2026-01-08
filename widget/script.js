@@ -56,7 +56,7 @@ if (widgetStyle === "2") {
 /////////////////
 
 // Update the access token - this expires so needs to be refreshed with refresh_token
-async function RefreshAccessToken() {
+async function refreshAccessToken() {
   console.debug(`Client ID: ${client_id}`);
   console.debug(`Client Secret: ${client_secret}`);
   console.debug(`Refresh Token: ${refresh_token}`);
@@ -85,7 +85,7 @@ async function RefreshAccessToken() {
   }
 }
 
-async function GetCurrentlyPlaying() {
+async function getCurrentlyPlaying() {
   try {
     // Get the current player information from Spotify
     const response = await fetch(
@@ -103,12 +103,12 @@ async function GetCurrentlyPlaying() {
     if (response.ok) {
       const responseData = await response.json();
       console.debug(responseData);
-      UpdatePlayer(responseData);
+      updatePlayer(responseData);
     } else {
       switch (response.status) {
         case 401:
           console.debug(`${response.status}`);
-          RefreshAccessToken();
+          refreshAccessToken();
           break;
         default:
           console.error(`${response.status}`);
@@ -116,20 +116,20 @@ async function GetCurrentlyPlaying() {
     }
     // Refresh
     setTimeout(() => {
-      GetCurrentlyPlaying();
+      getCurrentlyPlaying();
     }, 1000);
   } catch (error) {
     console.debug(error);
-    SetVisibility(false);
+    setVisibility(false);
 
     // Try again in 2 seconds
     setTimeout(() => {
-      GetCurrentlyPlaying();
+      getCurrentlyPlaying();
     }, 2000);
   }
 }
 
-function UpdatePlayer(data) {
+function updatePlayer(data) {
   const isPlaying = data.is_playing; // The play/pause state of the player
   const songUri = data.item.uri;
   const albumArt =
@@ -147,15 +147,15 @@ function UpdatePlayer(data) {
     // Set player visibility
     if (!isPlaying) {
       console.debug("Hiding player...");
-      SetVisibility(false);
+      setVisibility(false);
     } else {
       console.debug("Showing player...");
       setTimeout(() => {
-        SetVisibility(true);
+        setVisibility(true);
 
         if (visibilityDuration > 0) {
           setTimeout(() => {
-            SetVisibility(false, false);
+            setVisibility(false, false);
           }, visibilityDuration * 1000);
         }
       }, 500);
@@ -166,11 +166,11 @@ function UpdatePlayer(data) {
     if (isPlaying) {
       console.debug("Showing player...");
       setTimeout(() => {
-        SetVisibility(true);
+        setVisibility(true);
 
         if (visibilityDuration > 0) {
           setTimeout(() => {
-            SetVisibility(false, false);
+            setVisibility(false, false);
           }, visibilityDuration * 1000);
         }
       }, 500);
@@ -180,41 +180,38 @@ function UpdatePlayer(data) {
   }
 
   // Set thumbnail
-  UpdateAlbumArt(document.getElementById("albumArt"), albumArt);
-  UpdateAlbumArt(document.getElementById("backgroundImage"), albumArt);
+  updateAlbumArt(document.getElementById("albumArt"), albumArt);
+  updateAlbumArt(document.getElementById("backgroundImage"), albumArt);
 
   // Set full-screen background for style=3
   if (widgetStyle === "3") {
     const mainContainer = document.getElementById("mainContainer");
-    mainContainer.style.setProperty('--bg-image', `url(${albumArt})`);
+    mainContainer.style.setProperty("--bg-image", `url(${albumArt})`);
     // Apply the background image to the ::before pseudo-element
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       body.fullscreen-layout #mainContainer::before {
         background-image: url(${albumArt});
       }
     `;
     // Remove any existing dynamic style
-    const existingStyle = document.getElementById('dynamic-bg-style');
+    const existingStyle = document.getElementById("dynamic-bg-style");
     if (existingStyle) {
       existingStyle.remove();
     }
-    style.id = 'dynamic-bg-style';
+    style.id = "dynamic-bg-style";
     document.head.appendChild(style);
   }
 
   // Set song info
-  UpdateTextLabel(document.getElementById("artistLabel"), artist);
-  UpdateTextLabel(document.getElementById("songLabel"), name);
-  UpdateTextLabel(document.getElementById("albumLabel"), album);
+  updateTextLabel(document.getElementById("artistLabel"), artist);
+  updateTextLabel(document.getElementById("songLabel"), name);
+  updateTextLabel(document.getElementById("albumLabel"), album);
 
   // Set progressbar
   const progressPerc = (progress / duration) * 100; // Progress expressed as a percentage
-  const progressTime =
-    ConvertSecondsToMinutesSoThatItLooksBetterOnTheOverlay(progress);
-  const timeRemaining = ConvertSecondsToMinutesSoThatItLooksBetterOnTheOverlay(
-    duration - progress
-  );
+  const progressTime = formatSecondsAsMinutes(progress);
+  const timeRemaining = formatSecondsAsMinutes(duration - progress);
   console.debug(`Progress: ${progressTime}`);
   console.debug(`Time Remaining: ${timeRemaining}`);
   document.getElementById("progressBar").style.width = `${progressPerc}%`;
@@ -227,7 +224,7 @@ function UpdatePlayer(data) {
   }, 1000);
 }
 
-function UpdateTextLabel(div, text) {
+function updateTextLabel(div, text) {
   if (div.innerText != text) {
     div.setAttribute("class", "text-fade");
     setTimeout(() => {
@@ -237,7 +234,7 @@ function UpdateTextLabel(div, text) {
   }
 }
 
-function UpdateAlbumArt(div, imgsrc) {
+function updateAlbumArt(div, imgsrc) {
   if (div.src != imgsrc) {
     div.setAttribute("class", "text-fade");
     setTimeout(() => {
@@ -251,14 +248,14 @@ function UpdateAlbumArt(div, imgsrc) {
 // HELPER FUNCTIONS //
 //////////////////////
 
-function ConvertSecondsToMinutesSoThatItLooksBetterOnTheOverlay(time) {
+function formatSecondsAsMinutes(time) {
   const minutes = Math.floor(time / 60);
   const seconds = Math.trunc(time - minutes * 60);
 
   return `${minutes}:${("0" + seconds).slice(-2)}`;
 }
 
-function SetVisibility(isVisible, updateCurrentState = true) {
+function setVisibility(isVisible, updateCurrentState = true) {
   // For full-screen layout, always keep visible
   if (widgetStyle === "3") {
     const mainContainer = document.getElementById("mainContainer");
@@ -317,5 +314,5 @@ if (hideAlbumArt) {
 // KICK OFF THE WHOLE WIDGET  //
 ////////////////////////////////
 
-RefreshAccessToken();
-GetCurrentlyPlaying(); // This is a recursive function, so just run it once
+refreshAccessToken();
+getCurrentlyPlaying(); // This is a recursive function, so just run it once

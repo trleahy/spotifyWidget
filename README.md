@@ -1,4 +1,4 @@
-# SpotifyWidget
+# spotifyWidget
 A widget for OBS that displays the currently playing song on Spotify. It supports both compact and full-screen layouts, with optional album art and customizable duration.
 
 ## URL Parameters
